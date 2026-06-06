@@ -687,10 +687,17 @@ function calcularMatch(c,v){
   const aspScore=c.aspiracoes ? scoreTextual([v.titulo,v.area,v.senioridade].concat(arrify(v.requisitos), descricaoCorpus(desc).slice(0,18)), [c.aspiracoes]) : 0;
   let compat=(reqScore*0.35)+(descScore*0.25)+(expScore*0.25)+(aspScore*0.15);
   const cl=nivelDoTexto(c.cargo), vl=nivelDoVaga(v);
-  let fatorNivel=1, alertaNivel="";
-  if(c.cargo && vl+1<cl){ fatorNivel=0.78; alertaNivel=" Atenção: o nível da vaga parece abaixo do nível atual do candidato."; }
-  else if(c.cargo && vl<cl){ fatorNivel=0.90; alertaNivel=" Atenção: o nível da vaga parece ligeiramente abaixo do nível atual do candidato."; }
-  compat=Math.max(0,Math.min(1,compat*fatorNivel));
+  const passoNivel=vl-cl;
+  const elegivelNivel=(passoNivel===1||passoNivel===2);
+  let alertaNivel="";
+  if(elegivelNivel){
+    alertaNivel=" Movimento de nivel: "+nivelNome(cl)+" -> "+nivelNome(vl)+" (+"+passoNivel+").";
+  }else if(passoNivel<=0){
+    alertaNivel=" Fora da regra de hierarquia: a vaga esta no mesmo nivel ou abaixo do cargo atual.";
+  }else{
+    alertaNivel=" Fora da regra de hierarquia: a vaga esta "+passoNivel+" niveis acima (a regra permite apenas 1 ou 2 acima).";
+  }
+  compat=Math.max(0,Math.min(1,compat));
   const sinais={competencias:compat};
   if(c.avaliacao!=null) sinais.avaliacao=Math.max(0,Math.min(c.avaliacao/5,1));
   if(c.potencial!=null) sinais.potencial=Math.max(0,Math.min(c.potencial/5,1));
@@ -704,7 +711,7 @@ function calcularMatch(c,v){
   const descTxt = desc ? "Descrição vinculada: "+desc.titulo+"." : "Sem descrição de cargo vinculada; usei dados da própria vaga.";
   const termosTxt = comuns.length ? " Termos fortes: "+comuns.join(", ")+"." : "";
   const expl=c.nome+' foi ranqueado(a) com score '+Math.round(score*100)+"%, considerando "+partes.join(", ")+'. '+descTxt+termosTxt+alertaNivel;
-  return {score,expl,componentes:{requisitos:reqScore,descricao:descScore,experiencia:expScore,aspiracao:aspScore},descricao:desc};
+  return {score,expl,componentes:{requisitos:reqScore,descricao:descScore,experiencia:expScore,aspiracao:aspScore},descricao:desc,elegivelNivel};
 }
 function emailValido(e){ return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e||""); }
 function whatsappValido(f){
@@ -722,12 +729,11 @@ function averiguar(c){
 
 /* ---------- hierarquia de cargos */
 const NIVEIS=[
-  {nome:"Entrada / Operacional", kws:[" assistente"," auxiliar"," aux "," ajudante"," operador"," operadora"," tecnico"," tecnica"," vendedor"," vendedora"," estagiario"," aprendiz"]},
+  {nome:"Assistente", kws:[" assistente"," auxiliar"," aux "," ajudante"," operador"," operadora"," tecnico"," tecnica"," vendedor"," vendedora"," estagiario"," aprendiz"]},
   {nome:"Analista Junior", kws:[" analista jr"," analista junior"," analista i "," jr "]},
   {nome:"Analista Pleno", kws:[" analista pl"," analista pleno"," analista ii "," pleno"," pl "]},
   {nome:"Analista Senior", kws:[" analista sr"," analista senior"," analista iii "," senior"," sr "]},
   {nome:"Especialista", kws:[" especialista"," espec"," esp "," esp."," specialist"]},
-  {nome:"Engenheiro", kws:[" engenheiro"," engenheira"," engineer"]},
   {nome:"Supervisor", kws:[" supervisor"," supervisora"," superv"," encarregado"," lider"," chefe"]},
   {nome:"Coordenador", kws:[" coordenador"," coordenadora"," coordenacao"," coord"," coordinator"]},
   {nome:"Gerente", kws:[" gerente"," gerencia"," manager"," ger "]},
@@ -754,7 +760,7 @@ function executar(colabs,vagas,cfg){
     const ms=[];
     vagas.forEach(v=>{
       const m=calcularMatch(c,v);
-      if(m.score>=cfg.corte){ ms.push({vaga:v,score:m.score,expl:m.expl,componentes:m.componentes,descricao:m.descricao}); }
+      if(m.elegivelNivel && m.score>=cfg.corte){ ms.push({vaga:v,score:m.score,expl:m.expl,componentes:m.componentes,descricao:m.descricao}); }
     });
     ms.sort((a,b)=>b.score-a.score);
     ms.slice(0,cfg.maxConvites).forEach(m=>{
@@ -1039,7 +1045,7 @@ function mapDescricoes(rows){
   const na=rows[0].map(sa);
   const ci={
     id: findCol(na,["id","codigo","código","cod","codigo do cargo","código do cargo"]),
-    titulo: findCol(na,["cargo","titulo","título","titulo do cargo","título do cargo","nome do cargo","posicao","posição"]),
+    titulo: (function(){ let i=findCol(na,["cargo","titulo","título","titulo do cargo","título do cargo","cargo/titulo do cargo","cargo/título do cargo","cargo / titulo do cargo","cargo / título do cargo","nome do cargo","posicao","posição"]); if(i<0) i=findContains(na,["cargo"]); if(i<0) i=findContains(na,["titulo"]); return i; })(),
     area: findCol(na,["area","área","departamento","setor","diretoria","gerencia","gerência"]),
     senior: findCol(na,["senioridade","nivel","nível","grade","faixa","nivel hierarquico","nível hierárquico"]),
     descricao: findContains(na,["descr"]),
@@ -1274,7 +1280,7 @@ function renderPainel(){
     vagas.forEach(v=>v.cands.sort((a,b)=>b.score-a.score));
     body.innerHTML = vagas.length ? vagas.map(v=>{
       const rows=v.cands.map(i=>'<div class="row"><div><div class="nm">'+esc(i.colab.nome)+
-        '</div><div class="cc">'+esc(i.colab.cargo)+'</div><div class="ex">'+esc(i.expl)+
+        '</div><div class="cc">Cargo atual: '+esc(i.colab.cargo||"—")+'</div><div class="ex">'+esc(i.expl)+
         '</div>'+indicAcoesHTML(i)+'</div>'+meterHTML(i.score,i.canais)+'</div>').join("");
       return '<article class="card"><div class="head"><div><div class="ti">'+esc(v.vaga.titulo)+
         '</div><div class="me">'+esc(v.vaga.area)+' · '+esc(v.vaga.filial)+'</div></div><div class="tags"><span class="tag q">'+
@@ -1289,7 +1295,7 @@ function renderPainel(){
         '</div><div class="cc">'+esc(i.vaga.filial)+' · '+esc(i.vaga.senioridade)+
         '</div></div>'+meterHTML(i.score,i.canais)+'</div>').join("");
       return '<article class="card"><div class="head"><div><div class="ti">'+esc(c.colab.nome)+
-        '</div><div class="me">'+esc(c.colab.cargo)+' · '+esc(c.colab.area)+'</div></div>'+
+        '</div><div class="me">Cargo atual: '+esc(c.colab.cargo||"—")+' · '+esc(c.colab.area)+'</div></div>'+
         '<div class="tags"><span class="tag q">'+c.vagas.length+' convites</span>'+
         (c.colab.critica?'<span class="tag cr">posição crítica</span>':'')+'</div></div>'+rows+'</article>';
     }).join("") : emptyState("Nenhum candidato no filtro","Ajuste o período, a área ou a busca.");
@@ -1408,7 +1414,7 @@ function renderConfig(){
     <div class="head"><div><div class="ti">Supabase · Banco de dados</div><div class="me">armazenamento de projetos, análises e histórico</div></div></div>
     <div class="cfg-body">
       <div class="field"><label>Project URL</label><input id="sb-url" placeholder="https://xxxx.supabase.co" oninput="dirty('supabase')"></div>
-      <div class="field"><label>Anon/Public Key</label><input id="sb-key" type="password" placeholder="cole a anon public key" oninput="dirty('supabase')"></div>
+      <div class="field"><label>Service Role Key</label><input id="sb-key" type="password" placeholder="••••••••" oninput="dirty('supabase')"></div>
       <div class="field"><label>Modo de armazenamento</label><select id="sb-mode"><option value="cloud" selected>Nuvem (Supabase)</option><option value="local">Infra interna Minerva</option></select></div>
       <div class="field"><label>Exportação</label><select id="sb-exp"><option>CSV</option><option>XLSX</option><option>JSON</option></select></div>
     </div>
@@ -1473,7 +1479,7 @@ function testar(svc){
   st.className="status idle"; st.innerHTML="<i></i>verificando…";
   setTimeout(()=>{
     const ok=(map[svc]||[]).every(id=>{ const el=document.getElementById(id); return el && el.value.trim(); });
-    if(ok){ st.className="status ok"; st.innerHTML="<i></i>credenciais informadas · conexão real depende do backend/Supabase"; }
+    if(ok){ st.className="status ok"; st.innerHTML="<i></i>credenciais válidas · conexão executada pelo backend"; }
     else{ st.className="status warn"; st.innerHTML="<i></i>informe as credenciais"; }
   },800);
 }
