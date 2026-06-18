@@ -602,12 +602,26 @@ const TITLES = {
 
 /* ---------- engine ---------- */
 const STOPWORDS = new Set("a o os as um uma uns umas de da do das dos e em no na nos nas para por com sem sob sobre entre ate até ao aos às que seu sua seus suas como qual quais mais menos muito muita muitos muitas pela pelo pelas pelos ou e/ou tipo cargo vaga vagas candidato candidata candidatos candidatas experiencia experiência profissional profissionais atividade atividades responsabilidade responsabilidades requisito requisitos descricao descrição perfil area área setor departamento unidade filial minerva foods".split(/\s+/));
+const SINONIMOS = {
+  calidad:"qualidade", qualidade:"calidad",
+  seguridad:"seguranca", seguranca:"seguridad", inocuidad:"seguranca",
+  ingeniero:"engenheiro", engenheiro:"ingeniero", ingenieria:"engenharia", engenharia:"ingenieria",
+  ventas:"vendas", vendas:"ventas",
+  coordinador:"coordenador", coordenador:"coordinador",
+  produccion:"producao", producao:"produccion",
+  almacen:"armazem", armazem:"almacen",
+  proveedor:"fornecedor", fornecedor:"proveedor",
+  mantenimiento:"manutencao", manutencao:"mantenimiento",
+  recepcion:"recepcao", recepcao:"recepcion",
+  reclamo:"reclamacao", reclamos:"reclamacao",
+  jefe:"chefe", auditoria:"auditoria"
+};
 function tokens(arr){
   const out=new Set();
   const lista = Array.isArray(arr) ? arr : [arr];
   lista.forEach(s=>{
     const t=(s||"").toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
-    t.split(/[^a-z0-9]+/).forEach(w=>{ if(w.length>=3 && !STOPWORDS.has(w)) out.add(w); });
+    t.split(/[^a-z0-9]+/).forEach(w=>{ if(w.length>=3 && !STOPWORDS.has(w)){ out.add(w); const sin=SINONIMOS[w]; if(sin) out.add(sin); } });
   });
   return out;
 }
@@ -734,14 +748,14 @@ const NIVEIS=[
   {nome:"Analista Pleno", kws:[" analista pl"," analista pleno"," analista ii "," pleno"," pl "]},
   {nome:"Analista Senior", kws:[" analista sr"," analista senior"," analista iii "," senior"," sr "]},
   {nome:"Especialista", kws:[" especialista"," espec"," esp "," esp."," specialist"]},
-  {nome:"Supervisor", kws:[" supervisor"," supervisora"," superv"," encarregado"," lider"," chefe"]},
-  {nome:"Coordenador", kws:[" coordenador"," coordenadora"," coordenacao"," coord"," coordinator"]},
+  {nome:"Supervisor", kws:[" supervisor"," supervisora"," superv"," encarregado"," lider"," chefe"," jefe"]},
+  {nome:"Coordenador", kws:[" coordenador"," coordenadora"," coordenacao"," coord"," coordinator"," coordinador"]},
   {nome:"Gerente", kws:[" gerente"," gerencia"," manager"," ger "]},
   {nome:"Gerente Executivo", kws:[" gerente executivo"," gerente exec"," executive manager"]},
   {nome:"Diretor", kws:[" diretor"," diretora"," director"," vice presidente"," ceo"," presidente"]}
 ];
 function nivelDoTexto(t){
-  const s=" "+sa(t).replace(/[./]/g," ")+" ";
+  const s=" "+sa(t).replace(/[^a-z]+/g," ")+" ";
   for(let i=NIVEIS.length-1;i>=0;i--){ if(NIVEIS[i].kws.some(k=>s.includes(k))) return i; }
   if(s.includes(" analista")) return 2;
   return 0;
@@ -902,6 +916,19 @@ function tcase(s){ s=String(s||"").trim().toLowerCase(); return s.replace(/(^|[\
 function findCol(na,names){ for(const n of names){ const i=na.indexOf(sa(n)); if(i>=0) return i; } return -1; }
 function findContains(na,parts){ const ps=parts.map(sa); for(let i=0;i<na.length;i++){ if(ps.every(p=>na[i].includes(p))) return i; } return -1; }
 function findAll(na,prefixes,exclude){ const out=[], ps=prefixes.map(sa), ex=(exclude||[]).map(sa); na.forEach((x,i)=>{ if(ps.some(p=>x.startsWith(p)||x.includes(p)) && !ex.some(e=>x.includes(e))) out.push(i); }); return out; }
+function limpaCargo(s){ return String(s==null?"":s).replace(/^\s*\d{3,}\s*[-–—:]\s*/,"").trim(); }
+function pickHeaderRows(rows, sinais){
+  if(!rows || !rows.length) return rows||[];
+  const ps=(sinais||[]).map(sa);
+  const lim=Math.min(rows.length,12);
+  for(let i=0;i<lim;i++){
+    const cells=(rows[i]||[]).map(c=>sa(cleanCell(c)));
+    const naoVazias=cells.filter(Boolean).length;
+    const bate=ps.length? cells.some(c=>c && ps.some(p=>c.includes(p))) : true;
+    if(naoVazias>=3 && bate) return rows.slice(i);
+  }
+  return rows;
+}
 function splitList(v){ return arrify(v); }
 function parseNota(v){
   if(v==null||v==="") return null;
@@ -926,6 +953,7 @@ function parseData(v){
 }
 function mapRows(rows){
   if(!rows.length) return [];
+  rows=pickHeaderRows(rows,["nome","candidat","colaborador","talento","cargo atual","cargo","email","e-mail","user_login","login"]);
   const na=rows[0].map(sa);
   const ci={
     nome: findCol(na,["nome","nome completo","candidato","candidata","colaborador","talento"]),
@@ -998,7 +1026,7 @@ function mapRows(rows){
     let potencial=(quadIdx>=0?quadToPot(g(r,quadIdx)):null); if(potencial==null) potencial=parseNota(g(r,ci.potencial));
     out.push({
       id: g(r,ci.login)||email||("cand-"+k+"-"+sa(nome)), nome, email, whatsapp:g(r,ci.whats),
-      cargo:g(r,ci.cargo), area:tcase(g(r,ci.area)||formacoes[0]||""), filial:"",
+      cargo:limpaCargo(g(r,ci.cargo)), area:tcase(g(r,ci.area)||formacoes[0]||""), filial:"",
       critica, posicao:pos, disponibilidade:g(r,dispIdx),
       quadrante:(quadIdx>=0?g(r,quadIdx):""), performance:(perfIdx>=0?g(r,perfIdx):""),
       formacoes, certificados, idiomas, competencias,
@@ -1011,6 +1039,7 @@ function mapRows(rows){
 }
 function mapVagas(rows){
   if(!rows.length) return [];
+  rows=pickHeaderRows(rows,["titulo","título","vaga","cargo","posicao","posição","requisito","senioridade","nivel","nível","area","área"]);
   const na=rows[0].map(sa);
   const ci={
     titulo: findCol(na,["titulo da vaga","título da vaga","titulo","título","vaga","nome da vaga","cargo da vaga","cargo","posicao","posição","funcao","função","oportunidade"]),
@@ -1042,6 +1071,7 @@ function mapVagas(rows){
 }
 function mapDescricoes(rows){
   if(!rows.length) return [];
+  rows=pickHeaderRows(rows,["cargo","titulo","título","requisito","competenc","nivel","nível","area","área","responsabilidade","objetivo"]);
   const na=rows[0].map(sa);
   const ci={
     id: findCol(na,["id","codigo","código","cod","codigo do cargo","código do cargo"]),
