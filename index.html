@@ -574,7 +574,7 @@ DATA.descricoes = DATA.descricoes || [
 ];
 const state = { colaboradores: DATA.colaboradores.slice(), vagas: DATA.vagas.slice(), descricoes: (DATA.descricoes||[]).slice(),
                 results: null, lens: "vaga", source: null, sourceVagas: null, sourceDescricoes: "Banco interno de descrições" };
-state.cfg = { corte:0.40, maxConvites:3,
+state.cfg = { corte:0.40, corteAderencia:0.10, maxConvites:3,
   pesos:{ competencias:0.5, avaliacao:0.3, potencial:0.2 }, requireOptin:false,
   msg:{
     assunto:"Convite para a vaga {vaga} — Minerva Foods",
@@ -725,7 +725,7 @@ function calcularMatch(c,v){
   const descTxt = desc ? "Descrição vinculada: "+desc.titulo+"." : "Sem descrição de cargo vinculada; usei dados da própria vaga.";
   const termosTxt = comuns.length ? " Termos fortes: "+comuns.join(", ")+"." : "";
   const expl=c.nome+' foi ranqueado(a) com score '+Math.round(score*100)+"%, considerando "+partes.join(", ")+'. '+descTxt+termosTxt+alertaNivel;
-  return {score,expl,componentes:{requisitos:reqScore,descricao:descScore,experiencia:expScore,aspiracao:aspScore},descricao:desc,elegivelNivel};
+  return {score,compat,expl,componentes:{requisitos:reqScore,descricao:descScore,experiencia:expScore,aspiracao:aspScore},descricao:desc,elegivelNivel,passoNivel};
 }
 function emailValido(e){ return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e||""); }
 function whatsappValido(f){
@@ -756,9 +756,19 @@ const NIVEIS=[
 ];
 function nivelDoTexto(t){
   const s=" "+sa(t).replace(/[^a-z]+/g," ")+" ";
-  for(let i=NIVEIS.length-1;i>=0;i--){ if(NIVEIS[i].kws.some(k=>s.includes(k))) return i; }
-  if(s.includes(" analista")) return 2;
-  return 0;
+  let best=-1, bestPos=Infinity;
+  for(let i=0;i<NIVEIS.length;i++){
+    for(const k of NIVEIS[i].kws){
+      const p=s.indexOf(k);
+      if(p>=0 && (p<bestPos || (p===bestPos && i>best))){ bestPos=p; best=i; }
+    }
+  }
+  const pa=s.indexOf(" analista");
+  if(pa>=0){
+    const ehAnalistaRung=(best>=1 && best<=3);
+    if(best<0 || (pa<bestPos && !ehAnalistaRung)){ best=2; bestPos=pa; }
+  }
+  return best<0?0:best;
 }
 function nivelDoVaga(v){ return nivelDoTexto((v.titulo||"")+" "+(v.senioridade||"")); }
 function nivelNome(i){ return (NIVEIS[i]||NIVEIS[0]).nome; }
@@ -766,15 +776,19 @@ function nivelNome(i){ return (NIVEIS[i]||NIVEIS[0]).nome; }
 function executar(colabs,vagas,cfg){
   const vistos=new Set(), indic=[], descart=[];
   colabs.forEach(c=>{
+   try{
     const av=averiguar(c);
     const key=(c.email||"").toLowerCase() || (sa(c.nome)+"|"+sa(c.cargo));
     if(av.apto && key && vistos.has(key)){ av.apto=false; av.motivos.push("registro duplicado"); }
     else if(key) vistos.add(key);
     if(!av.apto){ descart.push({nome:c.nome||"sem nome",motivos:av.motivos}); return; }
     const ms=[];
+    const pisoAder=(cfg.corteAderencia!=null?cfg.corteAderencia:0.10);
     vagas.forEach(v=>{
-      const m=calcularMatch(c,v);
-      if(m.elegivelNivel && m.score>=cfg.corte){ ms.push({vaga:v,score:m.score,expl:m.expl,componentes:m.componentes,descricao:m.descricao}); }
+      try{
+        const m=calcularMatch(c,v);
+        if(m.elegivelNivel && m.compat>=pisoAder && m.score>=cfg.corte){ ms.push({vaga:v,score:m.score,expl:m.expl,componentes:m.componentes,descricao:m.descricao}); }
+      }catch(err){ try{console.warn("Kairos: falha ao avaliar vaga",(v&&v.id)||"?",err);}catch(_){} }
     });
     ms.sort((a,b)=>b.score-a.score);
     ms.slice(0,cfg.maxConvites).forEach(m=>{
@@ -784,6 +798,7 @@ function executar(colabs,vagas,cfg){
       };
       indic.push({colab:c,vaga:m.vaga,score:m.score,expl:m.expl,componentes:m.componentes,descricao:m.descricao,canais});
     });
+   }catch(errC){ try{console.warn("Kairos: candidato ignorado por erro",(c&&c.nome)||"?",errC);}catch(_){} }
   });
   const porVaga={};
   indic.forEach(i=>{ (porVaga[i.vaga.id]=porVaga[i.vaga.id]||{vaga:i.vaga,cands:[]}).cands.push(i); });
@@ -1135,9 +1150,15 @@ function analisar(){
       prog.style.width=Math.round((i+1)/steps.length*100)+"%";
       i++; setTimeout(tick,620);
     }else{
-      state.results=executar(state.colaboradores,state.vagas,state.cfg);
-      registrarHistorico(state.results);
-      setTimeout(()=>{ state.lens="vaga"; setLensUI(); go("painel"); },450);
+      try{
+        state.results=executar(state.colaboradores,state.vagas,state.cfg);
+        registrarHistorico(state.results);
+        setTimeout(()=>{ state.lens="vaga"; setLensUI(); go("painel"); },450);
+      }catch(err){
+        try{console.error("Kairos: falha na análise",err);}catch(_){}
+        go("upload");
+        showErr("Não foi possível concluir a análise. Confira o formato das planilhas (cabeçalhos e colunas) e tente novamente.");
+      }
     }
   }
   setTimeout(tick,300);
