@@ -427,8 +427,7 @@ body{
       <button data-screen="historico" onclick="go('historico')">
         <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 4v4h4"/><path d="M12 8v4l3 2"/></svg>Histórico</button>
       <div class="lbl">Administração</div>
-      <button data-screen="cargos" onclick="go('cargos')">
-        <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>Banco de cargos</button>
+
       <button data-screen="configuracoes" onclick="go('configuracoes')">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 13a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 7 19.6l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 5 13H4.9a2 2 0 0 1 0-4H5a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 12 4.4 2 2 0 0 1 14 5a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>Configurações</button>
     </nav>
@@ -453,10 +452,10 @@ body{
         <div class="upload-wrap">
           <div class="eyebrow">Kairos · análise de compatibilidade</div>
           <h2>Comece pelas bases da Minerva</h2>
-          <p>Envie candidatos, vagas abertas da Gupy e, quando tiver, a base de descrições de cargo. O Kairos cruza experiência, aspirações, notas, requisitos da vaga e descrição de cargo para gerar o ranking.</p>
+          <p>Envie a base de colaboradores avaliados (Mereo) e/ou acione os bancos internos da Gupy. As vagas publicadas — com suas descrições — vêm direto da Gupy. O Kairos cruza experiência, aspirações, notas e requisitos para gerar o ranking.</p>
           <div class="drops">
             <div>
-              <div class="drop-lbl">Candidatos / Talentos</div>
+              <div class="drop-lbl">Colaboradores · Mereo</div>
               <div class="drop" id="drop-tal" onclick="document.getElementById('file-tal').click()">
                 <div class="ic"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 5a3 3 0 0 1 0 6m5 9a6 6 0 0 0-5-5.9"/></svg></div>
                 <div class="t1" id="tal-t1">Arraste a base de candidatos ou clique</div>
@@ -465,22 +464,27 @@ body{
               <input type="file" id="file-tal" accept=".xlsx,.csv" style="display:none" onchange="onPick('tal',this.files)">
             </div>
             <div>
-              <div class="drop-lbl">Vagas Gupy</div>
-              <div class="drop" id="drop-vag" onclick="document.getElementById('file-vag').click()">
+              <div class="drop-lbl">Vagas · Gupy</div>
+              <div class="drop" id="drop-vag" onclick="importarVagasGupy()">
                 <div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></div>
-                <div class="t1" id="vag-t1">Arraste as vagas abertas da Gupy</div>
-                <div class="t2" id="vag-t2">.xlsx ou .csv</div>
+                <div class="t1" id="vag-t1">Importar vagas publicadas da Gupy</div>
+                <div class="t2" id="vag-t2">internas e externas · clique para importar/atualizar</div>
               </div>
-              <input type="file" id="file-vag" accept=".xlsx,.csv" style="display:none" onchange="onPick('vag',this.files)">
+              <div style="margin-top:10px;text-align:left;font-size:12.5px">
+                <label style="display:block;margin-bottom:4px"><input type="radio" name="escopo" checked onchange="setEscopo('todas')"> Todas as vagas publicadas</label>
+                <label style="display:block"><input type="radio" name="escopo" onchange="setEscopo('especifica')"> Vaga específica:
+                  <input type="text" id="vaga-num" placeholder="ex.: 11547429" style="width:110px;margin-left:6px" oninput="state.vagaNum=this.value" onfocus="setEscopoRadio()"></label>
+              </div>
             </div>
             <div>
-              <div class="drop-lbl">Descrições de Cargo</div>
-              <div class="drop" id="drop-desc" onclick="document.getElementById('file-desc').click()">
-                <div class="ic"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></div>
-                <div class="t1" id="desc-t1">Arraste a base de descrições ou clique</div>
-                <div class="t2" id="desc-t2">.xlsx ou .csv · opcional, mas recomendado</div>
+              <div class="drop-lbl">Bancos internos · Gupy</div>
+              <div class="drop" id="drop-bancos" onclick="toggleBancosPanel()">
+                <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/></svg></div>
+                <div class="t1" id="bancos-t1">Selecionar bancos de talentos</div>
+                <div class="t2" id="bancos-t2">clique para escolher · pode acionar vários</div>
               </div>
-              <input type="file" id="file-desc" accept=".xlsx,.csv" style="display:none" onchange="onPick('desc',this.files)">
+              <div id="bancos-panel" style="display:none;margin-top:10px;text-align:left;font-size:12.5px;max-height:180px;overflow:auto;border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:rgba(255,255,255,.55)"></div>
+              <button class="btn btn-ghost" id="btn-bancos" style="margin-top:8px;width:100%" onclick="importarBancosGupy()">Importar candidatos dos bancos</button>
             </div>
           </div>
           <div class="errbox" id="err"></div>
@@ -488,7 +492,7 @@ body{
             <button class="btn btn-primary" id="btn-analisar" disabled onclick="analisar()">
               <svg viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>Analisar e ranquear</button>
           </div>
-          <div class="hint">A descrição de cargo fica salva no navegador como banco local. Sem as planilhas agora? <a onclick="usarExemplo()">Use os dados de exemplo</a> para visualizar o sistema.</div>
+          <div class="hint">As descrições de cargo agora vêm dentro de cada vaga da Gupy — não é mais necessário enviá-las.</div>
         </div>
       </section>
 
@@ -582,6 +586,12 @@ DATA.descricoes = DATA.descricoes || [
 const state = { colaboradores: DATA.colaboradores.slice(), vagas: DATA.vagas.slice(), descricoes: (DATA.descricoes||[]).slice(),
                 results: null, lens: "vaga", source: null, sourceVagas: null, sourceDescricoes: "Banco interno de descrições" };
 state.cfg = { corte:0.40, corteAderencia:0.10, maxConvites:3,
+  bps:"",
+  tplBP:{ assunto:"Kairos · Indicação de talento interno — {vaga} ({codigo})",
+    corpo:"Olá!\n\n{nome} foi avaliado(a) pelo Kairos, sistema de mobilidade interna da Minerva Foods, e indicado(a) para o processo seletivo da vaga {vaga} (código Gupy {codigo}), da área {area}.\n\nAntes de qualquer convite, a selecionadora responsável pela condução do processo entrará em contato com você para alinhar se existe algum plano para {nome} dentro da área. O convite para candidatura só será enviado após esse alinhamento.\n\nGestão de Talentos · Minerva Foods — Momento certo · Tempo oportuno" },
+  tplCand:{ assunto:"Convite · Processo seletivo {vaga} ({codigo}) — Minerva Foods",
+    corpo:"Olá, {nome}!\n\nSeu perfil foi avaliado pelo Kairos, nosso sistema de mobilidade interna, e você foi indicado(a) para participar do processo seletivo da vaga {vaga} (código {codigo}).\n\nVocê também vai receber o convite oficial da Gupy por e-mail, com o link para confirmar a sua candidatura. Qualquer dúvida, fale com a equipe de Gestão de Talentos.\n\nGestão de Talentos · Minerva Foods — Momento certo · Tempo oportuno" },
+  tplWhats:"Olá, {nome}! Aqui é da Gestão de Talentos da Minerva Foods. Seu perfil foi indicado para o processo seletivo da vaga {vaga} (código {codigo}). Você vai receber o convite oficial por e-mail para confirmar a candidatura. Podemos contar com você?",
   pesos:{ competencias:0.5, avaliacao:0.3, potencial:0.2 }, requireOptin:false,
   msg:{
     assunto:"Convite para a vaga {vaga} — Minerva Foods",
@@ -728,16 +738,15 @@ function calcularMatch(c,v){
     aspScore=scoreTokens(aspRefTok,aspTok);
   }
   let compat=(reqScore*0.35)+(descScore*0.25)+(expScore*0.25)+(aspScore*0.15);
-  const cl=nivelColabC(c), vl=nivelVagaC(v);
-  const passoNivel=vl-cl;
-  const elegivelNivel=(passoNivel===1||passoNivel===2);
+  const vl=nivelVagaC(v);
+  const rng=nivelRangeDe(c);
+  const passoNivel=passoElegivel(c,vl);
+  const elegivelNivel=passoNivel>0;
   let alertaNivel="";
   if(elegivelNivel){
-    alertaNivel=" Movimento de nivel: "+nivelNome(cl)+" -> "+nivelNome(vl)+" (+"+passoNivel+").";
-  }else if(passoNivel<=0){
-    alertaNivel=" Fora da regra de hierarquia: a vaga esta no mesmo nivel ou abaixo do cargo atual.";
+    alertaNivel=" Movimento de nivel: "+rotuloNivelRange(rng)+" -> "+nivelNome(vl)+" (+"+passoNivel+").";
   }else{
-    alertaNivel=" Fora da regra de hierarquia: a vaga esta "+passoNivel+" niveis acima (a regra permite apenas 1 ou 2 acima).";
+    alertaNivel=" Fora da regra de hierarquia: a vaga ("+nivelNome(vl)+") nao esta 1 ou 2 niveis acima de "+rotuloNivelRange(rng)+".";
   }
   compat=Math.max(0,Math.min(1,compat));
   const sinais={competencias:compat};
@@ -771,8 +780,11 @@ function averiguar(c){
 
 /* ---------- hierarquia de cargos */
 const NIVEIS=[
-  {nome:"Assistente", kws:[" assistente"," auxiliar"," aux "," ajudante"," operador"," operadora"," tecnico"," tecnica"," vendedor"," vendedora"," estagiario"," aprendiz"]},
-  {nome:"Analista Junior", kws:[" analista jr"," analista junior"," analista i "," jr "]},
+  {nome:"Aprendiz", kws:[" aprendiz"," jovem aprendiz"]},
+  {nome:"Estagiário", kws:[" estagiario"," estagiaria"," estagio "," pasante"]},
+  {nome:"Auxiliar", kws:[" auxiliar"," aux "," ajudante"," operador"," operadora"]},
+  {nome:"Assistente", kws:[" assistente"," tecnico"," tecnica"," vendedor"," vendedora"," asesor"," asesora"]},
+  {nome:"Analista Junior", kws:[" analista jr"," analista junior"," analista i "," jr "," junior"]},
   {nome:"Analista Pleno", kws:[" analista pl"," analista pleno"," analista ii "," pleno"," pl "]},
   {nome:"Analista Senior", kws:[" analista sr"," analista senior"," analista iii "," senior"," sr "]},
   {nome:"Especialista", kws:[" especialista"," espec"," esp "," esp."," specialist"]},
@@ -793,13 +805,33 @@ function nivelDoTexto(t){
   }
   const pa=s.indexOf(" analista");
   if(pa>=0){
-    const ehAnalistaRung=(best>=1 && best<=3);
-    if(best<0 || (pa<bestPos && !ehAnalistaRung)){ best=2; bestPos=pa; }
+    const ehAnalistaRung=(best>=4 && best<=6);
+    if(best<0 || (pa<bestPos && !ehAnalistaRung)){ best=5; bestPos=pa; }
   }
   return best<0?0:best;
 }
 function nivelDoVaga(v){ return nivelDoTexto((v.titulo||"")+" "+(v.senioridade||"")); }
 function nivelNome(i){ return (NIVEIS[i]||NIVEIS[0]).nome; }
+/* Faixa de nível: candidato com cargo usa o cargo; sem cargo (vindo de banco Gupy) usa a faixa do banco. */
+function nivelRangeDe(c){
+  if(c && c.cargo && String(c.cargo).trim()){ const n=(_mc?nivelColabC(c):nivelDoTexto(c.cargo)); return [n,n]; }
+  if(c && Array.isArray(c.nivelRange) && c.nivelRange.length===2) return c.nivelRange;
+  return [3,3];
+}
+function passoElegivel(c,vl){
+  const r=nivelRangeDe(c);
+  let melhor=0;
+  for(let n=r[0];n<=r[1];n++){ const d=vl-n; if(d===1||d===2){ if(!melhor||d<melhor) melhor=d; } }
+  return melhor;
+}
+function rotuloNivelRange(r){ return r[0]===r[1] ? nivelNome(r[0]) : (nivelNome(r[0])+"–"+nivelNome(r[1])); }
+function nivelRangeDoBancoNome(nome){
+  const partes=String(nome||"").split("/");
+  let mn=99,mx=-1;
+  partes.forEach(p=>{ const n=nivelDoTexto(" "+p+" "); if(n<mn)mn=n; if(n>mx)mx=n; });
+  if(mx<0){ mn=2; mx=10; }
+  return [mn,mx];
+}
 
 function executar(colabs,vagas,cfg){
   if(!_mc || _mc._colabs!==colabs || _mc._vagas!==vagas || _mc._desc!==state.descricoes){ _resetCache(); _mc._colabs=colabs; _mc._vagas=vagas; _mc._desc=state.descricoes; }
@@ -813,11 +845,9 @@ function executar(colabs,vagas,cfg){
     if(!av.apto){ descart.push({nome:c.nome||"sem nome",motivos:av.motivos}); return; }
     const ms=[];
     const pisoAder=(cfg.corteAderencia!=null?cfg.corteAderencia:0.10);
-    const cl=nivelColabC(c);
     vagas.forEach(v=>{
       try{
-        const passo=nivelVagaC(v)-cl;
-        if(passo!==1 && passo!==2) return; // gate de hierarquia ANTES do score (barato)
+        if(!passoElegivel(c,nivelVagaC(v))) return; // gate de hierarquia ANTES do score (barato)
         const m=calcularMatch(c,v);
         if(m.compat>=pisoAder && m.score>=cfg.corte){ ms.push({vaga:v,score:m.score,expl:m.expl,componentes:m.componentes,descricao:m.descricao}); }
       }catch(err){ try{console.warn("Kairos: falha ao avaliar vaga",(v&&v.id)||"?",err);}catch(_){} }
@@ -896,7 +926,7 @@ function markDrop(kind,label,count){
   document.getElementById(kind+"-t1").textContent=label;
   document.getElementById(kind+"-t2").textContent=count;
 }
-function refreshAnalisar(){ document.getElementById("btn-analisar").disabled = !(state.talLoaded && state.vagasLoaded); }
+function refreshAnalisar(){ document.getElementById("btn-analisar").disabled = !(((state.talLoaded||state.bancosLoaded) && (state.colaboradores||[]).length) && state.vagasLoaded); }
 function usarExemplo(){
   state.colaboradores=DATA.colaboradores.slice(); state.vagas=DATA.vagas.slice(); state.descricoes=(DATA.descricoes||[]).slice();
   state.talLoaded=true; state.vagasLoaded=true; state.descLoaded=true; state.source="Dados de exemplo"; state.sourceVagas="Vagas de exemplo"; state.sourceDescricoes="Descrições de exemplo";
@@ -907,6 +937,179 @@ function usarExemplo(){
   refreshAnalisar();
 }
 function onPick(kind,files){ if(files && files[0]) handleFile(kind,files[0]); }
+
+/* ================== GUPY · VAGAS, BANCOS, GOVERNANÇA ================== */
+function setDropOk(kind,t1,t2){ const a=document.getElementById(kind+"-t1"), b=document.getElementById(kind+"-t2"), d=document.getElementById("drop-"+kind); if(a)a.textContent=t1; if(b)b.textContent=t2; if(d)d.classList.add("ok"); }
+function setEscopo(m){ state.escopo=m; }
+function setEscopoRadio(){ const rs=document.getElementsByName("escopo"); if(rs&&rs[1]) rs[1].checked=true; state.escopo="especifica"; }
+
+async function importarVagasGupy(silencioso){
+  if(location.protocol==="file:"){ if(!silencioso) showErr("Gupy — a importação só funciona no site publicado na Vercel, não com o arquivo aberto localmente."); return; }
+  const el=document.getElementById("vag-t1");
+  if(el) el.textContent="Importando vagas da Gupy…";
+  try{
+    const vagas=await GUPY.importarVagas();
+    if(!vagas.length) throw new Error("a Gupy não retornou vagas publicadas.");
+    state.vagas=vagas; state.vagasLoaded=true; state.sourceVagas="Gupy (API)"; GUPY.conectado=true;
+    setDropOk("vag", vagas.length+" vagas importadas da Gupy", "atualizado às "+relogioStr().split("·")[1].trim()+" · clique para atualizar");
+    initDatas(); refreshAnalisar(); showErr("");
+  }catch(err){
+    if(el) el.textContent="Importar vagas publicadas da Gupy";
+    if(!silencioso) showErr("Gupy — "+(err.message||"falha na importação."));
+  }
+}
+
+/* Catálogo oficial dos bancos internos (planilha Bancos_Internos.xlsx) */
+const BANCOS=[
+ {pais:"BR",nome:"ANALISTA/ASSISTENTE",tipo:"Administrativo",codigo:"11364664"},
+ {pais:"BR",nome:"ESPECIALISTA/TÉCNICO",tipo:"Administrativo",codigo:"11368285"},
+ {pais:"BR",nome:"ESPECIALISTA/TÉCNICO",tipo:"Operacional",codigo:"11368323"},
+ {pais:"BR",nome:"GERENTE",tipo:"Administrativo",codigo:"11368350"},
+ {pais:"BR",nome:"GERENTE",tipo:"Operacional",codigo:"11368379"},
+ {pais:"BR",nome:"VENDEDOR",tipo:"Administrativo",codigo:"11277179"},
+ {pais:"BR",nome:"SUPERVISOR/COORDENADOR",tipo:"Administrativo",codigo:"11368425"},
+ {pais:"BR",nome:"SUPERVISOR/COORDENADOR",tipo:"Operacional",codigo:"11368432"},
+ {pais:"COL",nome:"ASSISTENTE/ANALISTA",tipo:"Geral",codigo:"11273067"},
+ {pais:"COL",nome:"TÉCNICO/ESPECIALISTA",tipo:"Geral",codigo:"11499143"},
+ {pais:"COL",nome:"SUPERVISOR/COORDINADOR",tipo:"Geral",codigo:"11499457"},
+ {pais:"COL",nome:"ASESOR COMERCIAL (VENDEDOR)",tipo:"Geral",codigo:"11273630"},
+ {pais:"COL",nome:"GERENTE",tipo:"Geral",codigo:"11517124"},
+ {pais:"PY",nome:"ASSISTENTE/ANALISTA",tipo:"Geral",codigo:"11277773"},
+ {pais:"PY",nome:"TÉCNICO/ESPECIALISTA",tipo:"Geral",codigo:"11511532"},
+ {pais:"PY",nome:"SUPERVISOR/COORDINADOR",tipo:"Geral",codigo:"11512129"},
+ {pais:"PY",nome:"ASESOR COMERCIAL (VENDEDOR)",tipo:"Geral",codigo:"11278002"},
+ {pais:"PY",nome:"GERENTE",tipo:"Geral",codigo:"11517215"},
+ {pais:"UY",nome:"ASSISTENTE/ANALISTA",tipo:"Geral",codigo:"11279214"},
+ {pais:"UY",nome:"SUPERVISOR/COORDINADOR",tipo:"Geral",codigo:"11512224"},
+ {pais:"UY",nome:"ASESOR COMERCIAL (VENDEDOR)",tipo:"Geral",codigo:"11279531"},
+ {pais:"UY",nome:"GERENTE",tipo:"Geral",codigo:"11517313"},
+ {pais:"AR",nome:"ASSISTENTE/ANALISTA",tipo:"Geral",codigo:"11293271"},
+ {pais:"AR",nome:"TÉCNICO/ESPECIALISTA",tipo:"Geral",codigo:"11511655"},
+ {pais:"AR",nome:"SUPERVISOR/COORDINADOR",tipo:"Geral",codigo:"11512348"},
+ {pais:"AR",nome:"ASESOR COMERCIAL (VENDEDOR)",tipo:"Geral",codigo:"11305450"},
+ {pais:"AR",nome:"GERENTE",tipo:"Geral",codigo:"11517258"},
+ {pais:"—",nome:"ESCRITÓRIOS",tipo:"Geral",codigo:"11295090"}
+];
+function bancoLabel(b){ return b.pais+" · "+b.nome+" · "+b.tipo; }
+function toggleBancosPanel(){ const p=document.getElementById("bancos-panel"); if(!p) return; if(p.style.display==="none"){ renderBancosPanel(); p.style.display="block"; } else p.style.display="none"; }
+function renderBancosPanel(){
+  const p=document.getElementById("bancos-panel"); if(!p) return;
+  const sel=new Set(state.bancosSel||[]);
+  p.innerHTML='<div style="margin-bottom:6px"><a onclick="selBancos(\'all\')">todos</a> · <a onclick="selBancos(\'br\')">só BR</a> · <a onclick="selBancos(\'none\')">limpar</a></div>'+
+    BANCOS.map(b=>'<label style="display:block;margin:2px 0"><input type="checkbox" data-cod="'+b.codigo+'" '+(sel.has(b.codigo)?'checked':'')+' onchange="tickBanco(this)"> '+bancoLabel(b)+'</label>').join("");
+}
+function tickBanco(el){ const s=new Set(state.bancosSel||[]); if(el.checked) s.add(el.dataset.cod); else s.delete(el.dataset.cod); state.bancosSel=[...s]; }
+function selBancos(m){ if(m==='all') state.bancosSel=BANCOS.map(b=>b.codigo); else if(m==='br') state.bancosSel=BANCOS.filter(b=>b.pais==="BR").map(b=>b.codigo); else state.bancosSel=[]; renderBancosPanel(); }
+
+async function importarBancosGupy(){
+  const sel=state.bancosSel||[];
+  if(!sel.length){ showErr("Bancos — selecione ao menos um banco na lista antes de importar."); toggleBancosPanel(); return; }
+  if(location.protocol==="file:"){ showErr("Bancos — a importação só funciona no site publicado na Vercel."); return; }
+  const btn=document.getElementById("btn-bancos"); if(btn){ btn.disabled=true; btn.textContent="Importando candidatos…"; }
+  try{
+    const r=await fetch("/api/gupy/candidatos?jobIds="+encodeURIComponent(sel.join(",")),{cache:"no-store"});
+    let j=null; try{ j=await r.json(); }catch(e){}
+    if(!r.ok || !j || !j.ok) throw new Error((j&&j.erro)||("o servidor respondeu "+r.status+"."));
+    const cands=(j.candidatos||[]).map(x=>{
+      const b=BANCOS.find(bb=>String(bb.codigo)===String(x.bancoCodigo));
+      return { id: sa(x.email||("gupy-"+x.gupyCandidateId)), nome:x.nome||"", email:x.email||"", whatsapp:x.telefone||"",
+        cargo:x.cargo||"", area:(b?b.pais+" "+b.nome:""), filial:"", formacoes:[], certificados:[], idiomas:[],
+        experiencias:[x.resumo||""].filter(Boolean), aspiracoes:"", avaliacao:null, potencial:null, critica:false, optin:false,
+        origem:[b?bancoLabel(b):("Banco "+x.bancoCodigo)], nivelRange:(b?nivelRangeDoBancoNome(b.nome==="ESCRITÓRIOS"?"":b.nome):[2,10]),
+        gupyCandidateId:x.gupyCandidateId||null, fonte:"gupy-banco" };
+    });
+    state.colabsBancos=cands; state.bancosLoaded=cands.length>0;
+    mesclarCandidatos();
+    setDropOk("bancos", cands.length+" candidatos de "+sel.length+" banco(s)", "clique para alterar a seleção");
+    refreshAnalisar(); showErr("");
+  }catch(err){ showErr("Bancos Gupy — "+(err.message||"falha na importação.")); }
+  finally{ if(btn){ btn.disabled=false; btn.textContent="Importar candidatos dos bancos"; } }
+}
+function mesclarCandidatos(){
+  const mapa=new Map();
+  (state.colabsMereo||[]).forEach(c=>{ c.origem=Array.isArray(c.origem)?c.origem:["Mereo"]; mapa.set(sa(c.email||c.id), c); });
+  (state.colabsBancos||[]).forEach(c=>{
+    const k=sa(c.email||c.id);
+    if(mapa.has(k)){ const m=mapa.get(k);
+      m.origem=[...new Set([...(m.origem||["Mereo"]),...c.origem])];
+      if(!m.whatsapp && c.whatsapp) m.whatsapp=c.whatsapp;
+      if(!m.gupyCandidateId && c.gupyCandidateId) m.gupyCandidateId=c.gupyCandidateId;
+    } else mapa.set(k,c);
+  });
+  state.colaboradores=[...mapa.values()];
+}
+
+/* ---------- Governança do convite (BP -> aprovação -> inserir na vaga) ---------- */
+function loadGov(){ try{ state.gov=JSON.parse(localStorage.getItem("kairos_gov_v1")||"{}")||{}; }catch(e){ state.gov={}; } }
+function persistGov(){ try{ localStorage.setItem("kairos_gov_v1",JSON.stringify(state.gov||{})); }catch(e){} }
+function govKey(cid,vid){ return sa(cid)+"|"+sa(vid); }
+function govGet(cid,vid){ return (state.gov||{})[govKey(cid,vid)] || {st:"aguardando"}; }
+function govSet(cid,vid,patch){ state.gov=state.gov||{}; const k=govKey(cid,vid); state.gov[k]=Object.assign({},state.gov[k]||{st:"aguardando"},patch); persistGov(); }
+function marcarHistGov(cid,vid,fase,resultado){
+  (state.historico||[]).filter(h=>sa(h.colabId)===sa(cid)&&sa(h.vagaId)===sa(vid)).forEach(h=>{ h.fase=fase; if(resultado) h.resultado=resultado; });
+  persistHistorico();
+}
+function renderTpl(t,i,extra){
+  const v=i.vaga||{}, c=i.colab||{};
+  return String(t||"").replace(/\{nome\}/g,c.nome||"").replace(/\{vaga\}/g,v.titulo||"").replace(/\{codigo\}/g,String(v.gupyId||v.codigo||v.id||"")).replace(/\{area\}/g,v.area||"").replace(/\{bp\}/g,(extra&&extra.bp)||"");
+}
+function bpEmailForArea(area){
+  const linhas=String((state.cfg&&state.cfg.bps)||"").split(/\n/);
+  const a=sa(area);
+  for(const ln of linhas){ const p=ln.split("="); if(p.length>=2 && a && sa(p[0]) && (a.includes(sa(p[0]))||sa(p[0]).includes(a))) return p.slice(1).join("=").trim(); }
+  return "";
+}
+async function enviarEmailCorp(tipo,para,assunto,corpo){
+  const r=await fetch("/api/email/enviar",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({tipo,para,assunto,corpo})});
+  let j=null; try{ j=await r.json(); }catch(e){}
+  if(!r.ok || !j || !j.ok) throw new Error((j&&j.erro)||("o servidor respondeu "+r.status+"."));
+  return true;
+}
+async function govAvisarBP(cid,vid){
+  const i=findIndic(cid,vid); if(!i) return;
+  let bp=bpEmailForArea(i.vaga.area);
+  if(!bp) bp=prompt("E-mail da BP da área ("+(i.vaga.area||"—")+"):")||"";
+  if(!bp || !emailValido(bp)){ showErr("Governança — informe um e-mail válido da BP (dá pra cadastrar por área em Configurações)."); return; }
+  try{
+    await enviarEmailCorp("bp",bp,renderTpl(state.cfg.tplBP.assunto,i,{bp}),renderTpl(state.cfg.tplBP.corpo,i,{bp}));
+    govSet(cid,vid,{st:"bp_avisada",bpEmail:bp,dtBP:hojeLocal()});
+    marcarHistGov(cid,vid,"BP avisada");
+    renderPainel(); showErr("");
+  }catch(err){ showErr("E-mail corporativo — "+(err.message||"falha no envio.")); }
+}
+function govAprovar(cid,vid){ govSet(cid,vid,{st:"aprovado",dtAprov:hojeLocal()}); marcarHistGov(cid,vid,"Aprovado pela BP"); renderPainel(); }
+function govRecusar(cid,vid){
+  if(!confirm("Recusar esta indicação para esta vaga? O candidato continua elegível para outras vagas.")) return;
+  govSet(cid,vid,{st:"recusado",dtRec:hojeLocal()}); marcarHistGov(cid,vid,"Recusado","reprovado"); renderPainel();
+}
+async function govInserir(cid,vid){
+  const i=findIndic(cid,vid); if(!i) return;
+  const g=govGet(cid,vid); if(g.st!=="aprovado"){ showErr("Governança — a inserção só libera após registrar a aprovação da BP."); return; }
+  if(!i.vaga.gupyId){ showErr("Esta vaga não veio da Gupy (sem jobId) — a inserção automática só vale para vagas importadas da Gupy."); return; }
+  const btnMsg="Inserindo na vaga…"; showErr("");
+  try{
+    const partes=String(i.colab.nome||"").trim().split(/\s+/);
+    const payload={ jobId:i.vaga.gupyId, nome:partes[0]||"", sobrenome:partes.slice(1).join(" ")||"-", email:i.colab.email||"", telefone:i.colab.whatsapp||"", candidateId:i.colab.gupyCandidateId||null };
+    const r=await fetch("/api/gupy/inserir",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+    let j=null; try{ j=await r.json(); }catch(e){}
+    if(!r.ok || !j || !j.ok) throw new Error((j&&j.erro)||("o servidor respondeu "+r.status+"."));
+    govSet(cid,vid,{st:"inserido",dtIns:hojeLocal(),applicationId:j.applicationId||null});
+    marcarHistGov(cid,vid,"Inserido na vaga · convite Gupy enviado","andamento");
+    i.enviado=true; registrarHistorico({indic:[i]});
+    try{ await enviarEmailCorp("candidato",i.colab.email,renderTpl(state.cfg.tplCand.assunto,i),renderTpl(state.cfg.tplCand.corpo,i)); }
+    catch(e2){ showErr("Inserido na Gupy com sucesso, mas o e-mail corporativo falhou: "+(e2.message||"")+" (o convite oficial da Gupy foi disparado mesmo assim)."); }
+    renderPainel();
+  }catch(err){ showErr("Inserção na Gupy — "+(err.message||"falha.")); }
+}
+function govWhats(cid,vid){
+  const i=findIndic(cid,vid); if(!i) return;
+  let tel=String(i.colab.whatsapp||"").replace(/\D/g,"");
+  if(!tel){ tel=String(prompt("WhatsApp do candidato (com DDD, ex.: 11999998888):")||"").replace(/\D/g,""); if(!tel) return; }
+  if(tel.length<=11 && !tel.startsWith("55")) tel="55"+tel;
+  const msg=encodeURIComponent(renderTpl(state.cfg.tplWhats,i));
+  window.open("https://wa.me/"+tel+"?text="+msg,"_blank","noopener");
+}
+/* ================== fim do bloco GUPY/GOVERNANÇA ================== */
 function lerPlanilha(file){
   return new Promise((res,rej)=>{
     const reader=new FileReader(); const isCsv=/\.csv$/i.test(file.name);
@@ -928,7 +1131,7 @@ function handleFile(kind,file){
     if(kind==="tal"){
       const colabs=mapRows(rows);
       if(!colabs.length) throw new Error("nenhum candidato encontrado na planilha.");
-      state.colaboradores=colabs; state.talLoaded=true; state.source=file.name;
+      state.colabsMereo=colabs; mesclarCandidatos(); state.talLoaded=true; state.source=file.name;
       markDrop("tal",file.name, colabs.length+" candidatos lidos");
     } else if(kind==="vag") {
       const vagas=mapVagas(rows);
@@ -1171,8 +1374,15 @@ function loadDescricoesCargo(){
 
 /* ---------- análise ---------- */
 function analisar(){
+  if(state.escopo==="especifica"){
+    const num=String(state.vagaNum||"").replace(/\D/g,"");
+    if(!num){ showErr("Escopo — informe o número da vaga (ex.: 11547429)."); return; }
+    const alvo=(state.vagas||[]).filter(v=>String(v.gupyId||"")===num||String(v.codigo||"")===num||String(v.id||"").includes(num));
+    if(!alvo.length){ showErr("Vaga "+num+" não encontrada entre as publicadas importadas da Gupy. Confira o número e o status da vaga, e clique em Atualizar vagas."); return; }
+    state.vagasAtivas=alvo;
+  } else { state.vagasAtivas=state.vagas; }
   go("analise");
-  document.getElementById("proc-src").textContent="cruzando "+state.colaboradores.length+" candidatos × "+state.vagas.length+" vagas × "+(state.descricoes||[]).length+" descrições de cargo";
+  document.getElementById("proc-src").textContent="cruzando "+state.colaboradores.length+" candidatos × "+state.vagasAtivas.length+" vaga(s) da Gupy";
   const steps=document.querySelectorAll("#steps .step");
   const prog=document.getElementById("prog");
   steps.forEach(s=>s.classList.remove("active","done"));
@@ -1186,7 +1396,7 @@ function analisar(){
       i++; setTimeout(tick,620);
     }else{
       try{
-        state.results=executar(state.colaboradores,state.vagas,state.cfg);
+        state.results=executar(state.colaboradores,(state.vagasAtivas||state.vagas),state.cfg);
         registrarHistorico(state.results);
         setTimeout(()=>{ state.lens="vaga"; setLensUI(); go("painel"); },450);
       }catch(err){
@@ -1341,13 +1551,23 @@ function descartarIndicacao(colabId,vagaId){
 }
 function indicAcoesHTML(i){
   const cid=jsq(i.colab.id), vid=jsq(i.vaga.id);
-  if(i.enviado) return '<div style="display:flex;gap:8px;align-items:center;margin-top:8px"><span class="status ok" style="display:inline-flex"><i></i>convite preparado</span></div>';
-  let warn="";
-  if(!i.descricao) warn='<div style="width:100%;font-size:12.5px;line-height:1.45;color:var(--wait);border:1px solid var(--wait);border-radius:9px;padding:8px 11px;margin:4px 0 2px">Não foi encontrada descrição de cargo para essa posição. Deseja enviar convite mesmo assim?</div>';
-  return '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">'+warn
-    + '<button class="btn btn-primary" style="padding:6px 12px" onclick="enviarConvite(\''+cid+'\',\''+vid+'\')"><svg viewBox="0 0 24 24"><path d="M4 12l16-7-7 16-2-7-7-2z"/></svg>Enviar convite</button>'
-    + '<button class="btn btn-ghost" style="padding:6px 12px" onclick="descartarIndicacao(\''+cid+'\',\''+vid+'\')">Descartar indicação</button>'
-    + '</div>';
+  const g=govGet(i.colab.id,i.vaga.id);
+  const origem=(i.colab.origem&&i.colab.origem.length)?'<div style="font-size:11.5px;color:var(--ink3);margin-top:4px">Origem: '+esc(i.colab.origem.join(" + "))+'</div>':"";
+  const aviso='<div style="width:100%;font-size:12.5px;line-height:1.45;color:var(--navy-d);border:1px dashed var(--line);border-radius:9px;padding:8px 11px;margin:6px 0 2px"><b>Selecionadora, favor consultar a BP da área</b> antes de enviar o convite.</div>';
+  function b(label,fn,cls,dis,title){ return '<button class="btn '+(cls||"btn-ghost")+'" style="padding:6px 12px" '+(dis?'disabled title="'+(title||"")+'"':'')+' onclick="'+fn+'(\''+cid+'\',\''+vid+'\')">'+label+'</button>'; }
+  let estado="", botoes="";
+  if(g.st==="recusado"){ estado='<span class="res no">✖ Recusado · '+esc(g.dtRec||"")+'</span>'; }
+  else if(g.st==="inserido"){ estado='<span class="res ok">✓ Inserido na vaga · convite Gupy enviado · '+esc(g.dtIns||"")+'</span>'+ '<div style="margin-top:6px">'+b("WhatsApp","govWhats","btn-ghost")+'</div>'; }
+  else{
+    if(g.st==="aguardando"){ estado='<span class="res mid">● Aguardando decisão</span>'; botoes=b("Avisar BP","govAvisarBP","btn-primary")+b("Recusar","govRecusar"); }
+    else if(g.st==="bp_avisada"){ estado='<span class="res mid">● BP avisada · '+esc(g.dtBP||"")+'</span>'; botoes=b("BP aprovou","govAprovar","btn-primary")+b("Recusar","govRecusar"); }
+    else if(g.st==="aprovado"){ estado='<span class="res ok">● Aprovado pela BP · '+esc(g.dtAprov||"")+'</span>'; }
+    const podeInserir=(g.st==="aprovado");
+    botoes+=b("Inserir na vaga indicada","govInserir", podeInserir?"btn-primary":"btn-ghost", !podeInserir, "Libera após registrar a aprovação da BP")
+          + b("WhatsApp","govWhats","btn-ghost");
+  }
+  return aviso+origem+'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">'+estado+'</div>'
+    + (botoes?'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">'+botoes+'</div>':"");
 }
 function fecharModalConvite(){ const m=document.getElementById("kairos-modal"); if(m) m.remove(); }
 function abrirModalConvite(i,conv){
@@ -1546,6 +1766,12 @@ function renderConfig(){
     <div class="head"><div><div class="ti">Parâmetros do algoritmo</div><div class="me">aplicados na próxima análise</div></div></div>
     <div class="cfg-body">
       <div class="field full"><label>Corte mínimo de score — <b id="corte-val">${corte}%</b></label><input type="range" min="0" max="100" value="${corte}" oninput="var e=document.getElementById('corte-val'); if(e) e.textContent=this.value+'%'" onchange="setCorte(this.value)"><div class="help">Abaixo desse score, o colaborador não é convidado para a vaga.</div></div>
+      <div class="field full"><label>BPs por área (uma por linha: área=email)</label><textarea rows="4" style="width:100%" oninput="setCfgTxt('bps',this.value)" placeholder="Qualidade=bp.qualidade@minervafoods.com&#10;Comercial=bp.comercial@minervafoods.com">${esc(state.cfg.bps||"")}</textarea><div class="help">Usado no botão "Avisar BP". Se a área não estiver aqui, o Kairos pergunta o e-mail na hora.</div></div>
+      <div class="field full"><label>E-mail para a BP — assunto</label><input type="text" style="width:100%" value="${esc(state.cfg.tplBP.assunto)}" oninput="setTpl('tplBP','assunto',this.value)"></div>
+      <div class="field full"><label>E-mail para a BP — corpo</label><textarea rows="6" style="width:100%" oninput="setTpl('tplBP','corpo',this.value)">${esc(state.cfg.tplBP.corpo)}</textarea><div class="help">Campos: {nome} {vaga} {codigo} {area}</div></div>
+      <div class="field full"><label>E-mail para o candidato — assunto</label><input type="text" style="width:100%" value="${esc(state.cfg.tplCand.assunto)}" oninput="setTpl('tplCand','assunto',this.value)"></div>
+      <div class="field full"><label>E-mail para o candidato — corpo</label><textarea rows="6" style="width:100%" oninput="setTpl('tplCand','corpo',this.value)">${esc(state.cfg.tplCand.corpo)}</textarea></div>
+      <div class="field full"><label>Mensagem de WhatsApp</label><textarea rows="3" style="width:100%" oninput="setCfgTxt('tplWhats',this.value)">${esc(state.cfg.tplWhats)}</textarea></div>
       <div class="field"><label>Máx. de convites por colaborador</label><input type="number" min="1" max="10" value="${c.maxConvites}" onchange="setMax(this.value)"></div>
       <div class="field"><label>Pesos do score</label>
         <div class="pesos">
@@ -1586,7 +1812,7 @@ function renderConfig(){
   </article>
   `;
 }
-function rerun(){ if(state.results) state.results=executar(state.colaboradores,state.vagas,state.cfg); }
+function rerun(){ if(state.results) state.results=executar(state.colaboradores,(state.vagasAtivas||state.vagas),state.cfg); }
 function setCorte(v){ state.cfg.corte=Math.max(0,Math.min(1,(parseInt(v,10)||0)/100)); const e=document.getElementById("corte-val"); if(e) e.textContent=Math.round(state.cfg.corte*100)+"%"; rerun(); }
 function setMax(v){ state.cfg.maxConvites=Math.max(1,parseInt(v,10)||1); rerun(); }
 function setPeso(k,v){ state.cfg.pesos[k]=Math.max(0,(parseFloat(v)||0)/100); const s=document.getElementById("pesos-sum");
@@ -1700,7 +1926,12 @@ const GUPY = {
     enviarMensagem:     "POST /applications/{applicationId}/email"
   },
   webhooks: ["application.created","application.moved","application.completed","candidate.hired"],
-  importarVagas(){ throw new Error("Gupy não conectada (Fase 2 — backend)."); },
+  async importarVagas(){
+    const r=await fetch("/api/gupy/vagas",{cache:"no-store"});
+    let j=null; try{ j=await r.json(); }catch(e){}
+    if(!r.ok || !j || !j.ok) throw new Error((j&&j.erro)||("o servidor respondeu "+r.status+"."));
+    return j.vagas||[];
+  },
   enviarConvite(){ throw new Error("Gupy não conectada (Fase 2 — backend)."); },
   sincronizarStatus(){ throw new Error("Gupy não conectada (Fase 2 — backend)."); }
 };
@@ -1816,10 +2047,17 @@ function initDatas(){
   });
 })();
 loadDescricoesCargo();
+try{ localStorage.removeItem("kairos_descricoes_cargo_v1"); }catch(e){}
+state.descricoes=[];
+function persistCfg(){ try{ localStorage.setItem("kairos_cfg_v2",JSON.stringify({bps:state.cfg.bps,tplBP:state.cfg.tplBP,tplCand:state.cfg.tplCand,tplWhats:state.cfg.tplWhats})); }catch(e){} }
+function loadCfg(){ try{ const j=JSON.parse(localStorage.getItem("kairos_cfg_v2")||"null"); if(j){ if(j.bps!=null)state.cfg.bps=j.bps; if(j.tplBP)state.cfg.tplBP=j.tplBP; if(j.tplCand)state.cfg.tplCand=j.tplCand; if(j.tplWhats)state.cfg.tplWhats=j.tplWhats; } }catch(e){} }
+function setCfgTxt(k,v){ state.cfg[k]=v; persistCfg(); }
+function setTpl(t,k,v){ state.cfg[t][k]=v; persistCfg(); }
+loadCfg(); loadGov();
 initDatas();
 loadHistorico();
 refreshAnalisar();
-ancorarHora().then(iniciarRelogio);
+ancorarHora().then(function(){ iniciarRelogio(); importarVagasGupy(true); });
 go("upload");
 </script>
 </body>
