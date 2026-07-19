@@ -21,6 +21,14 @@ module.exports = async (req, res) => {
         const lista = Array.isArray(j)?j:((j&&(j.results||j.data))||[]);
         for(const a of lista){
           const c = a.candidate||a.candidato||a;
+          const arr=x=>Array.isArray(x)?x:[];
+          const exps=[...arr(c&&c.professionalExperiences),...arr(c&&c.experiences),...arr(a.professionalExperiences)]
+            .map(e=>limpa([e&&(e.role||e.position||e.title||e.jobTitle), e&&(e.company||e.institution||e.employer), e&&(e.description||e.activities||e.summary)].filter(Boolean).join(" — "))).filter(Boolean);
+          const forms=[...arr(c&&c.formations),...arr(c&&c.educations),...arr(c&&c.academicFormations)]
+            .map(e=>limpa([e&&(e.course||e.name||e.title), e&&(e.institution||e.school)].filter(Boolean).join(" — "))).filter(Boolean);
+          const skills=[...arr(c&&c.skills),...arr(c&&c.abilities)].map(x=>limpa(typeof x==="string"?x:(x&&(x.name||x.title))||"")).filter(Boolean);
+          const idiomas=[...arr(c&&c.languages)].map(x=>limpa(typeof x==="string"?x:[x&&x.language,x&&x.level].filter(Boolean).join(" "))).filter(Boolean);
+          const cargoAtual=limpa((c&&(c.currentJob||c.jobTitle||c.currentPosition))||"") || (exps.length?limpa(String(exps[0]).split(" — ")[0]):"");
           candidatos.push({
             bancoCodigo: String(jobId),
             applicationId: a.id||null,
@@ -28,8 +36,12 @@ module.exports = async (req, res) => {
             nome: limpa([c&&c.name, c&&c.lastName].filter(Boolean).join(" ")) || limpa(a.name),
             email: (c&&(c.email||c.emailAddress))||a.email||"",
             telefone: (c&&(c.mobileNumber||c.phoneNumber||c.phone))||"",
-            cargo: limpa((c&&(c.currentJob||c.jobTitle))||""),
-            resumo: limpa((c&&(c.summary||c.about))||"")
+            cargo: cargoAtual,
+            experiencias: exps.slice(0,12),
+            formacoes: forms.slice(0,8),
+            skills: skills.slice(0,25),
+            idiomas: idiomas.slice(0,6),
+            resumo: limpa((c&&(c.summary||c.about||c.objective))||"")
           });
         }
         if(!Array.isArray(lista) || lista.length<100) break;
