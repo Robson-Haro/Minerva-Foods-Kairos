@@ -1,4 +1,4 @@
-// Kairos · Bancos internos Gupy — v3.1 compacta (lista + detalhe/curriculo + filtro de inativas)
+// Kairos · Bancos internos Gupy — v3.2 (tenta tambem o cadastro do candidato + censo de status)
 const BASE="https://api.gupy.io/api/v1";
 const limpa=s=>String(s==null?"":s).replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim();
 const arr=x=>Array.isArray(x)?x:[];
@@ -21,6 +21,7 @@ module.exports=async(req,res)=>{
   if(!ids.length) return res.status(400).json({ok:false,erro:"Informe jobIds."});
   const INAT=["reproved","disqualified","withdrawn","cancel","reject","declin","desist"];
   const cands=[],avisos=[],vistos=new Set();
+  const statusCount={};
   let totalApi=0,inativas=0,duplicadas=0,detalheOk=0,detalheFalha=0;
   try{
     for(const jobId of ids){
@@ -34,26 +35,31 @@ module.exports=async(req,res)=>{
         for(const a of lista){
           totalApi++;
           const st=String(a.status||"").toLowerCase();
+          statusCount[st||"(vazio)"]=(statusCount[st||"(vazio)"]||0)+1;
           if(INAT.some(x=>st.includes(x))){inativas++;continue;}
           const email=(a.candidate&&a.candidate.email)||a.email||"";
           const k=String(a.id||"")+"|"+email.toLowerCase();
           if(vistos.has(k)){duplicadas++;continue;}
           vistos.add(k);
           let ex=extrai(a);
-          if(!ex.rico&&a.id&&(detalheOk+detalheFalha)<120){
+          const candId=(a.candidate&&a.candidate.id)||a.candidateId||null;
+          if(!ex.rico&&(detalheOk+detalheFalha)<120){
+            const urls=[];
+            if(candId) urls.push(BASE+"/candidates/"+encodeURIComponent(candId));
+            if(a.id){ urls.push(BASE+"/jobs/"+encodeURIComponent(jobId)+"/applications/"+encodeURIComponent(a.id)); urls.push(BASE+"/applications/"+encodeURIComponent(a.id)); }
             let det=null;
-            for(const u of [BASE+"/jobs/"+encodeURIComponent(jobId)+"/applications/"+encodeURIComponent(a.id),BASE+"/applications/"+encodeURIComponent(a.id)]){
+            for(const u of urls){
               try{const rd=await fetch(u,{headers:H}); if(rd.ok){const jd=await rd.json().catch(()=>null); if(jd){det=jd.results||jd.data||jd;break;}}}catch(e){}
             }
-            if(det){const ex2=extrai(Object.assign({},a,det,{candidate:Object.assign({},a.candidate||{},det.candidate||{})})); if(ex2.rico){ex=ex2;detalheOk++;}else{detalheFalha++;}}
+            if(det){const ex2=extrai(Object.assign({},a,det,{candidate:Object.assign({},a.candidate||{},det.candidate||det||{})})); if(ex2.rico){ex=ex2;detalheOk++;}else{detalheFalha++;}}
             else{detalheFalha++;}
           }
-          cands.push({bancoCodigo:String(jobId),applicationId:a.id||null,gupyCandidateId:(ex.c&&ex.c.id)||null,nome:limpa([ex.c&&ex.c.name,ex.c&&ex.c.lastName].filter(Boolean).join(" ")),email:email,telefone:(ex.c&&(ex.c.mobileNumber||ex.c.phone))||"",cargo:ex.cargo,experiencias:ex.exps.slice(0,12),formacoes:ex.forms.slice(0,8),skills:ex.skills.slice(0,25),idiomas:ex.idiomas.slice(0,6),resumo:ex.resumo,perfilRico:ex.rico});
+          cands.push({bancoCodigo:String(jobId),applicationId:a.id||null,gupyCandidateId:candId,nome:limpa([ex.c&&ex.c.name,ex.c&&ex.c.lastName].filter(Boolean).join(" ")),email:email,telefone:(ex.c&&(ex.c.mobileNumber||ex.c.phone))||"",cargo:ex.cargo,experiencias:ex.exps.slice(0,12),formacoes:ex.forms.slice(0,8),skills:ex.skills.slice(0,25),idiomas:ex.idiomas.slice(0,6),resumo:ex.resumo,perfilRico:ex.rico});
         }
         if(!Array.isArray(lista)||lista.length<100)break;
       }
     }
-    return res.status(200).json({ok:true,total:cands.length,totalApi,inativas,duplicadas,detalheOk,detalheFalha,candidatos:cands,avisos});
+    return res.status(200).json({ok:true,total:cands.length,totalApi,inativas,duplicadas,detalheOk,detalheFalha,statusCount,candidatos:cands,avisos});
   }catch(e){
     return res.status(502).json({ok:false,erro:"Falha ao falar com a Gupy: "+((e&&e.message)||"erro"),avisos});
   }
