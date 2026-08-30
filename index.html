@@ -768,7 +768,7 @@ state.cfg = { corte:0.40, corteAderencia:0.10, maxConvites:3, incluirSemPerfil:f
   tplCand:{ assunto:"Convite Â· Processo seletivo {vaga} ({codigo}) â€” Minerva Foods",
     corpo:"OlÃ¡, {nome}!\n\nSeu perfil foi avaliado pelo Kairos, nosso sistema de mobilidade interna, e vocÃª foi indicado(a) para participar do processo seletivo da vaga {vaga} (cÃ³digo {codigo}).\n\nVocÃª tambÃ©m vai receber o convite oficial da Gupy por e-mail, com o link para confirmar a sua candidatura. Qualquer dÃºvida, fale com a equipe de GestÃ£o de Talentos.\n\nGestÃ£o de Talentos Â· Minerva Foods â€” Momento certo Â· Tempo oportuno" },
   tplWhats:"OlÃ¡, {nome}! Aqui Ã© da GestÃ£o de Talentos da Minerva Foods. Seu perfil foi indicado para o processo seletivo da vaga {vaga} (cÃ³digo {codigo}). VocÃª vai receber o convite oficial por e-mail para confirmar a candidatura. Podemos contar com vocÃª?",
-  pesos:{ competencias:0.5, avaliacao:0.3, potencial:0.2 }, requireOptin:false,
+  pesos:{ competencias:0.75, avaliacao:0.15, potencial:0.10 }, requireOptin:false,
   msg:{
     assunto:"Convite para a vaga {vaga} â€” Minerva Foods",
     email:"OlÃ¡, {nome}!\n\nIdentificamos que o seu perfil tem alta compatibilidade com a vaga {vaga} ({area}). GostarÃ­amos de convidÃ¡-lo(a) a se candidatar pelo nosso portal.\n\nAcesse: {link}\n\nAbraÃ§os,\nGestÃ£o de Talentos Â· Minerva Foods",
@@ -824,10 +824,39 @@ const SINONIMOS_GRUPOS = [
   ["frigorifico","abate","desossa","carne","beef","protein","proteina"],
   ["coordenador","coordinador","coordenacao"],
   ["gerente","gerencia","manager"],
-  ["supervisor","superv","encarregado"]
+  ["supervisor","superv","encarregado"],
+  ["remuneracao","compensation","compensacao","salarios","payroll","beneficios"]
 ];
 const SIN_CANON = (function(){ const m={}; SINONIMOS_GRUPOS.forEach(g=>{ const c=g[0]; g.forEach(t=>{ if(/^[a-z0-9]+$/.test(t)) m[t]=c; }); }); return m; })();
-const FRASES = { "controle de qualidade":"qualidade","garantia da qualidade":"qualidade","seguranca de alimentos":"seguranca","seguranca dos alimentos":"seguranca","food safety":"seguranca","boas praticas":"bpf","supply chain":"logistica","power bi":"dados","recursos humanos":"rh","gestao de pessoas":"lideranca","gestao de equipe":"lideranca","comercio exterior":"exportacao","controles internos":"auditoria","analise de riscos":"auditoria" };
+const FRASES = { "controle de qualidade":"qualidade","garantia da qualidade":"qualidade","seguranca de alimentos":"seguranca","seguranca dos alimentos":"seguranca","food safety":"seguranca","boas praticas":"bpf","supply chain":"logistica","power bi":"dados","recursos humanos":"rh","gestao de pessoas":"lideranca","gestao de equipe":"lideranca","comercio exterior":"exportacao","controles internos":"auditoria","analise de riscos":"auditoria","estrutura salarial":"remuneracao","cargos e salarios":"remuneracao","remuneracao variavel":"remuneracao","remuneracao executiva":"remuneracao","folha de pagamento":"payroll","orcamento de pessoal":"headcount" };
+
+/* Experiência técnica obrigatória para domínios especializados. */
+const DOMINIOS_CRITICOS=[
+  {id:"remuneracao",rotulo:"Remuneração e Benefícios",detect:/remuner|compensation|compensacao|cargos e salarios|estrutura salarial|payroll|beneficios/,
+   pilares:[
+    {rotulo:"remuneração, cargos ou estrutura salarial",re:/remuner|compensation|compensacao|estrutura salarial|cargos e salarios|grade salarial|politica salarial/},
+    {rotulo:"benefícios",re:/benefici|benefit/},
+    {rotulo:"folha ou payroll",re:/payroll|folha de pagamento|folha salarial/},
+    {rotulo:"headcount ou quadro de pessoal",re:/headcount|quadro de pessoal/},
+    {rotulo:"orçamento de pessoal",re:/orcamento de pessoal|budget de pessoal|custo de pessoal/},
+    {rotulo:"remuneração variável ou incentivos",re:/remuneracao variavel|incentivo de curto|incentivo de longo|bonus|bonificacao|ilp|ltip/},
+    {rotulo:"avaliação de cargos ou pesquisa salarial",re:/avaliacao de cargos|pesquisa salarial|benchmarking salarial|metodologia.*cargo/}
+   ],min:2},
+  {id:"sap",rotulo:"SAP",detect:/\bsap\b|successfactors|s\/4 hana/,
+   pilares:[{rotulo:"experiência em SAP",re:/\bsap\b|successfactors|s\/4 hana|abap/}],min:1},
+  {id:"qualidade",rotulo:"Qualidade",detect:/qualidade|quality|haccp|seguranca de alimentos/,
+   pilares:[{rotulo:"qualidade, auditoria ou segurança de alimentos",re:/qualidade|quality|haccp|appcc|auditoria de qualidade|seguranca de alimentos/}],min:1}
+];
+function corpusNormalizado(x){ return sa((Array.isArray(x)?x:[x]).flat(Infinity).map(v=>typeof v==="object"?JSON.stringify(v):String(v||"")).join(" ")); }
+function validarDominioCritico(c,v){
+  const textoVaga=corpusNormalizado(vagaCorpus(v,null));
+  const dom=DOMINIOS_CRITICOS.find(d=>d.detect.test(textoVaga));
+  if(!dom) return {ok:true,dominio:null,evidencias:[],faltantes:[]};
+  const textoCand=corpusNormalizado(perfilCorpus(c));
+  const evidencias=dom.pilares.filter(p=>p.re.test(textoCand));
+  const faltantes=dom.pilares.filter(p=>!p.re.test(textoCand));
+  return {ok:evidencias.length>=dom.min,dominio:dom.rotulo,evidencias:evidencias.map(x=>x.rotulo),faltantes:faltantes.map(x=>x.rotulo),min:dom.min};
+}
 /* radicalizador leve de PT (conservador, mÃ­n. 4 letras): junta plural/gÃªnero e sufixos comuns */
 function radical(w){
   let s=w;
@@ -954,7 +983,7 @@ function calcularMatch(c,v){
   const elegivelNivel=passoNivel>0;
   let alertaNivel="";
   if(elegivelNivel){
-    alertaNivel=" Movimento de nivel: "+rotuloNivelRange(rng)+" -> "+nivelNome(vl)+" (+"+passoNivel+").";
+    alertaNivel=passoNivel===0.5 ? " Movimento lateral no mesmo nivel: "+nivelNome(vl)+"." : " Movimento de nivel: "+rotuloNivelRange(rng)+" -> "+nivelNome(vl)+" (+"+passoNivel+").";
   }else{
     alertaNivel=" Fora da regra de hierarquia: a vaga ("+nivelNome(vl)+") nao esta 1 ou 2 niveis acima de "+rotuloNivelRange(rng)+".";
   }
@@ -965,6 +994,7 @@ function calcularMatch(c,v){
   let pesoTotal=0; for(const k in sinais) pesoTotal+=P[k]||0;
   if(pesoTotal<=0) pesoTotal=1;
   let score=0; for(const k in sinais) score+=((P[k]||0)/pesoTotal)*sinais[k];
+  if(compat<0.30) score=Math.min(score,0.39);
   const comuns=termosComunsTok(vagaCorpTok,perfilTok,6);
   const partes=["requisitos "+Math.round(reqScore*100)+"%","descriÃ§Ã£o de cargo "+Math.round(descScore*100)+"%","experiÃªncia "+Math.round(expScore*100)+"%","aspiraÃ§Ã£o "+Math.round(aspScore*100)+"%"];
   if("avaliacao" in sinais) partes.push("nota "+c.avaliacao.toFixed(1)+"/5");
@@ -1031,7 +1061,7 @@ function nivelRangeDe(c){
 function passoElegivel(c,vl){
   const r=nivelRangeDe(c);
   let melhor=0;
-  for(let n=r[0];n<=r[1];n++){ const d=vl-n; if(d===1||d===2){ if(!melhor||d<melhor) melhor=d; } }
+  for(let n=r[0];n<=r[1];n++){ const d=vl-n; if(d===0) return 0.5; if(d===1||d===2){ if(!melhor||d<melhor) melhor=d; } }
   return melhor;
 }
 function rotuloNivelRange(r){ return r[0]===r[1] ? nivelNome(r[0]) : (nivelNome(r[0])+"â€“"+nivelNome(r[1])); }
@@ -1044,7 +1074,7 @@ function nivelRangeDoBancoNome(nome){
 }
 
 function executar(colabs,vagas,cfg){
-  const _diag={cands:(colabs||[]).length,vagas:(vagas||[]).length,pares:0,bloqHier:0,bloqPiso:0,bloqCorte:0,perfilFraco:0};
+  const _diag={cands:(colabs||[]).length,vagas:(vagas||[]).length,pares:0,bloqHier:0,bloqDominio:0,bloqPiso:0,bloqCorte:0,perfilFraco:0};
   if(!_mc || _mc._colabs!==colabs || _mc._vagas!==vagas || _mc._desc!==state.descricoes){ _resetCache(); _mc._colabs=colabs; _mc._vagas=vagas; _mc._desc=state.descricoes; }
   const vistos=new Set(), indic=[], descart=[];
   colabs.forEach(c=>{
@@ -1062,6 +1092,8 @@ function executar(colabs,vagas,cfg){
       try{
         _diag.pares++;
         if(!passoElegivel(c,nivelVagaC(v))){ _diag.bloqHier++; return; } // gate de hierarquia ANTES do score (barato)
+        const dominio=validarDominioCritico(c,v);
+        if(!dominio.ok){ _diag.bloqDominio++; return; }
         const m=calcularMatch(c,v);
         if(_fraco && cfg.incluirSemPerfil && c.fonte==="gupy-banco"){
           ms.push({vaga:v,score:m.score,expl:"âš  Perfil nÃ£o disponÃ­vel na API da Gupy â€” indicado pela faixa de hierarquia do banco ("+rotuloNivelRange(nivelRangeDe(c))+" â†’ "+nivelNome(nivelVagaC(v))+"). ValidaÃ§Ã£o manual recomendada antes do convite.",componentes:m.componentes,descricao:m.descricao,semPerfil:true});
@@ -1069,7 +1101,8 @@ function executar(colabs,vagas,cfg){
         }
         if(m.compat<pisoAder){ _diag.bloqPiso++; return; }
         if(m.score<cfg.corte){ _diag.bloqCorte++; return; }
-        ms.push({vaga:v,score:m.score,expl:m.expl,componentes:m.componentes,descricao:m.descricao});
+        const ev=dominio.dominio?(" Evidencias obrigatorias de "+dominio.dominio+": "+dominio.evidencias.join(", ")+"."):"";
+        ms.push({vaga:v,score:m.score,expl:m.expl+ev,componentes:m.componentes,descricao:m.descricao,dominio});
       }catch(err){ try{console.warn("Kairos: falha ao avaliar vaga",(v&&v.id)||"?",err);}catch(_){} }
     });
     ms.sort((a,b)=>b.score-a.score);
@@ -1078,7 +1111,7 @@ function executar(colabs,vagas,cfg){
         email: emailValido(c.email)?"preparado":"pendente",
         whatsapp: whatsappValido(c.whatsapp)?"preparado":"pendente"
       };
-      indic.push({colab:c,vaga:m.vaga,score:m.score,expl:m.expl,componentes:m.componentes,descricao:m.descricao,semPerfil:!!m.semPerfil,canais});
+      indic.push({colab:c,vaga:m.vaga,score:m.score,expl:m.expl,componentes:m.componentes,descricao:m.descricao,dominio:m.dominio||null,semPerfil:!!m.semPerfil,canais});
     });
    }catch(errC){ try{console.warn("Kairos: candidato ignorado por erro",(c&&c.nome)||"?",errC);}catch(_){} }
   });
@@ -1512,9 +1545,17 @@ function parseCSV(text){
   if(cur!==""||row.length){ row.push(cur); rows.push(row); }
   return rows;
 }
-function norm(s){ return (s==null?"":String(s)).trim().toLowerCase(); }
-function sa(s){ return (s==null?"":String(s)).normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim().toLowerCase(); }
-function cleanCell(v){ if(v==null) return ""; const s=String(v).trim(); const l=s.toLowerCase();
+function corrigirCodificacao(s){
+  s=String(s==null?"":s);
+  if(!/Ã|Â|â[€-™]|ðŸ|ï¿½/i.test(s)) return s;
+  const reverse={"€":128,"‚":130,"ƒ":131,"„":132,"…":133,"†":134,"‡":135,"ˆ":136,"‰":137,"Š":138,"‹":139,"Œ":140,"Ž":142,"‘":145,"’":146,"“":147,"”":148,"•":149,"–":150,"—":151,"˜":152,"™":153,"š":154,"›":155,"œ":156,"ž":158,"Ÿ":159};
+  const bytes=[];
+  for(const ch of s){ const cp=ch.codePointAt(0); if(cp<=255) bytes.push(cp); else if(reverse[ch]!=null) bytes.push(reverse[ch]); else return s; }
+  try{ const out=new TextDecoder("utf-8",{fatal:true}).decode(new Uint8Array(bytes)); return out.includes("�")?s:out; }catch(_){ return s; }
+}
+function norm(s){ return corrigirCodificacao(s).trim().toLowerCase(); }
+function sa(s){ return corrigirCodificacao(s).normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim().toLowerCase(); }
+function cleanCell(v){ if(v==null) return ""; const s=corrigirCodificacao(v).trim(); const l=s.toLowerCase();
   return (s===""||s==="#N/A"||l==="none"||l==="n/a")? "" : s; }
 function tcase(s){ s=String(s||"").trim().toLowerCase(); return s.replace(/(^|[\s/.-])([a-zÃ -Ãº])/g,(m,p,ch)=>p+ch.toUpperCase()); }
 function findCol(na,names){ for(const n of names){ const i=na.indexOf(sa(n)); if(i>=0) return i; } return -1; }
@@ -1616,8 +1657,8 @@ function mapRows(rows){
     expBlocks.forEach(b=>{
       const cargoE=g(r,b.cargo), empresa=g(r,b.empresa), areaC=g(r,b.area), exp=g(r,b.exp), desc=g(r,b.desc);
       if(!cargoE && !desc && !areaC && !exp) return;
-      const titulo=[cargoE,empresa].filter(Boolean).join(" Â· ")||"ExperiÃªncia";
-      const dtxt=[desc, exp?("ExperiÃªncia: "+exp):"", areaC?("Ãrea de conhecimento: "+areaC):""].filter(Boolean).join(" ");
+      const titulo=[cargoE,empresa].filter(Boolean).join(" · ")||"Experiência";
+      const dtxt=[desc, exp?("Experiência: "+exp):"", areaC?("Área de conhecimento: "+areaC):""].filter(Boolean).join(" ");
       experiencias.push({titulo, desc:dtxt});
     });
     expFreeCols.map(i=>g(r,i)).filter(Boolean).forEach(txt=>experiencias.push({titulo:"Resumo profissional",desc:txt}));
@@ -1957,7 +1998,7 @@ function diagHTML(){
   const d=state.results&&state.results.diag; if(!d) return "";
   const zero=(state.results.indic||[]).length===0;
   const vg=(state.vagasAtivas||state.vagas||[]); const comDesc=vg.filter(v=>String(v.descricao||"").length>=80).length;
-  const linha=d.cands+" candidatos Ã— "+d.vagas+" vaga(s) ("+comDesc+" com descriÃ§Ã£o vinda da Gupy) = "+d.pares+" cruzamentos Â· barrados: "+d.bloqHier+" pela hierarquia (+1/+2), "+d.bloqPiso+" pelo piso de aderÃªncia, "+d.bloqCorte+" pelo corte de score"+(d.perfilFraco?(" Â· "+d.perfilFraco+" candidato(s) vieram da Gupy sem perfil textual (impossÃ­vel medir aderÃªncia)"):"");
+  const linha=d.cands+" candidatos Ã— "+d.vagas+" vaga(s) ("+comDesc+" com descriÃ§Ã£o vinda da Gupy) = "+d.pares+" cruzamentos Â· barrados: "+d.bloqHier+" pela hierarquia, "+d.bloqDominio+" pelo domÃ­nio tÃ©cnico obrigatÃ³rio, "+d.bloqPiso+" pelo piso de aderÃªncia, "+d.bloqCorte+" pelo corte de score"+(d.perfilFraco?(" Â· "+d.perfilFraco+" candidato(s) vieram da Gupy sem perfil textual (impossÃ­vel medir aderÃªncia)"):"");
   return '<div style="font-size:12px;color:'+(zero?'var(--red)':'var(--ink3)')+';margin:6px 0 10px;padding:8px 12px;border:1px '+(zero?'solid var(--red)':'dashed var(--line)')+';border-radius:9px;background:rgba(255,255,255,.7)">'+(zero?'<b>Nenhuma indicaÃ§Ã£o â€” entenda o porquÃª:</b> ':'')+linha+'</div>';
 }
 function renderPainel(){
