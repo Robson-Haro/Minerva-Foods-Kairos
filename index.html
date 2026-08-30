@@ -2487,5 +2487,32 @@ go("upload");
   });
 })();
 </script>
+<script id="kairos-encoding-repair">
+/* Repara textos antigos salvos com UTF-8 interpretado como Windows-1252. */
+(function(){
+  const reverse={"€":128,"‚":130,"ƒ":131,"„":132,"…":133,"†":134,"‡":135,"ˆ":136,"‰":137,"Š":138,"‹":139,"Œ":140,"Ž":142,"‘":145,"’":146,"“":147,"”":148,"•":149,"–":150,"—":151,"˜":152,"™":153,"š":154,"›":155,"œ":156,"ž":158,"Ÿ":159};
+  const suspeito=/Ã|Â|â[€-™]|ðŸ|ï¿½|NÃ|DescriÃ|ExperiÃ|ConfiguraÃ|HistÃ|AnÃ|GestÃ|cÃ³digo|nÃ£o/i;
+  function corrigir(s){
+    s=String(s==null?"":s); if(!suspeito.test(s)) return s;
+    const bytes=[];
+    for(const ch of s){ const cp=ch.codePointAt(0); if(cp<=255) bytes.push(cp); else if(reverse[ch]!=null) bytes.push(reverse[ch]); else return s; }
+    try{ const out=new TextDecoder("utf-8",{fatal:true}).decode(new Uint8Array(bytes)); return out.includes("�")?s:out; }catch(_){ return s; }
+  }
+  function reparar(root){
+    if(!root) return;
+    if(root.nodeType===3){ const v=corrigir(root.nodeValue); if(v!==root.nodeValue) root.nodeValue=v; return; }
+    if(root.nodeType!==1&&root.nodeType!==9&&root.nodeType!==11) return;
+    if(root.nodeType===1){
+      ["title","aria-label","placeholder"].forEach(a=>{ if(root.hasAttribute&&root.hasAttribute(a)){ const v=root.getAttribute(a), n=corrigir(v); if(n!==v) root.setAttribute(a,n); } });
+      if(root.tagName==="INPUT"&&root.type!=="password"&&root.value){ const n=corrigir(root.value); if(n!==root.value) root.value=n; }
+    }
+    const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT); let n; while((n=walker.nextNode())){ const v=corrigir(n.nodeValue); if(v!==n.nodeValue)n.nodeValue=v; }
+  }
+  let ocupado=false;
+  const obs=new MutationObserver(list=>{ if(ocupado)return; ocupado=true; try{list.forEach(m=>m.addedNodes.forEach(reparar));}finally{ocupado=false;} });
+  function iniciar(){ reparar(document); obs.observe(document.body,{childList:true,subtree:true}); }
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",iniciar,{once:true}); else iniciar();
+})();
+</script>
 </body>
 </html>
