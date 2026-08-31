@@ -1958,7 +1958,7 @@ function indicAcoesHTML(i){
   if(g.st==="recusado"){ estado='<span class="res no">âœ– Recusado Â· '+esc(g.dtRec||"")+'</span>'; }
   else if(g.st==="inserido"){ estado='<span class="res ok">âœ“ Inserido na vaga Â· convite Gupy enviado Â· '+esc(g.dtIns||"")+'</span>'+ '<div style="margin-top:6px">'+b("WhatsApp","govWhats","btn-ghost")+'</div>'; }
   else{
-    if(g.st==="aguardando"){ estado='<span class="res mid">â— Aguardando decisÃ£o</span>'; botoes=b("Avisar BP","govAvisarBP","btn-primary")+b("Recusar","govRecusar"); }
+    if(g.st==="aguardando"){ estado='<span class="res mid">â— Aguardando decisÃ£o</span>'; botoes=b("BP aprovou","govAprovar","btn-primary")+b("Recusar","govRecusar"); }
     else if(g.st==="bp_avisada"){ estado='<span class="res mid">â— BP avisada Â· '+esc(g.dtBP||"")+'</span>'; botoes=b("BP aprovou","govAprovar","btn-primary")+b("Recusar","govRecusar"); }
     else if(g.st==="aprovado"){ estado='<span class="res ok">â— Aprovado pela BP Â· '+esc(g.dtAprov||"")+'</span>'; }
     const podeInserir=(g.st==="aprovado");
@@ -2466,6 +2466,8 @@ function setCfgTxt(k,v){ state.cfg[k]=v; persistCfg(); }
 function setTpl(t,k,v){ state.cfg[t][k]=v; persistCfg(); }
 loadCfg(); loadGov();
 try{ state.bancosSel=JSON.parse(localStorage.getItem("kairos_bancos_sel")||"[]")||[]; }catch(e){ state.bancosSel=[]; }
+state.bancosSel=state.bancosSel.filter(codigo=>BANCOS.some(b=>b.codigo===String(codigo)));
+try{ localStorage.setItem("kairos_bancos_sel",JSON.stringify(state.bancosSel)); }catch(e){}
 atualizaContadorBancos();
 initDatas();
 loadHistorico();
